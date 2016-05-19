@@ -774,21 +774,102 @@ void SetDate::Update(TM_T now)
 /**
  * Full screen display of SetUp options as buttons.
  */
-void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046&touch)
+void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch)
 {
-  const int MAX_BUTTONS=3;
-  Button* bttns[MAX_BUTTONS];
-  Button stb(&tft, 20, 20, 120, 40, "Set Time");
-  Button sdb(&tft, 20, 70, 120, 40, "Set Date");
-  Button cncl(&tft, 120, 180, 120, 40, "Cancel");
+  enum EButton {
+    bttn_set_time,
+    bttn_set_date,
+    bttn_done,
+    bttn_max    // Always the last enum.
+  };
 
-  bttns[0] = &stb;
-  bttns[1] = &sdb;
-  bttns[2] = &cncl;
+  bool Done = false;
+  Button* touching = NULL;
+  
+  Button* bttns[bttn_max];
+  Button stb(&tft, 20, 40, 130, 40, "Time");
+  Button sdb(&tft, 20, 90, 130, 40, "Date");
+  //Button sdb(&tft, 170, 40, 130, 40, "Date");
+  Button dnb(&tft, 100, 190, 120, 40, "Done");
+
+  EButton pressed;
+
+  bttns[bttn_set_time]  = &stb;
+  bttns[bttn_set_date]  = &sdb;
+  bttns[bttn_done]      = &dnb;
   
   tft.fillScreen(ILI9341_BLACK);
   tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-  tft.drawCentreString("SET UP", 160, 10, 4); 
+  tft.drawCentreString("SET", 160, 10, 4); 
+  for(int idx=0; idx < (int)bttn_max; idx++) bttns[idx]->Draw();
 
+  while(!Done)
+  {
+    if (!touching && touch.isTouching())
+    {
+      uint16_t x, y, tens, units;
+      touch.getPosition(x, y);
+      pressed = bttn_max;
+
+      // Which Button widget is being touched, if any.
+      for(int idx=0; idx < (int)bttn_max; idx++)
+      {
+        if ( (touching = (Button *)bttns[idx]->Press(x, y)) )
+        {
+          beepDelay(50);  // Beep to show a button was pressed.
+          pressed = (EButton)idx;
+          touching->Release();
+          touching = NULL;
+          break;
+        }
+      }  
+
+      if (bttn_max != pressed) 
+      {
+        TM_T now;
+        get_date_time(&now); 
+        
+        switch (pressed) 
+        {
+          case bttn_set_time:
+          {
+            SetTime st_ctrl(&tft, &touch);
+            tft.fillScreen(ILI9341_BLACK);
+            st_ctrl.Display(now); 
+            st_ctrl.Update(now);
+            break;
+          }
+          case bttn_set_date:
+          {
+            SetDate sd_ctrl(&tft, &touch);
+            tft.fillScreen(ILI9341_BLACK);
+            sd_ctrl.Display(now);
+            sd_ctrl.Update(now); 
+            break;
+          }
+          case bttn_done:
+            Done = true;
+            break;
+          default:
+            // Shouldn't happen
+            break;
+        }
+
+        // redraw if returning from setup screen.
+        if (pressed != bttn_done) {
+          tft.fillScreen(ILI9341_BLACK);
+          tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+          tft.drawCentreString("SET", 160, 10, 4); 
+          for(int idx=0; idx < (int)bttn_max; idx++) bttns[idx]->Draw();
+        }
+      }
+    }
+    else if (touching && !touch.isTouching())
+    {
+      touching->Release();
+      touching = NULL;
+    }
+    delay(50);
+  }
 }
 

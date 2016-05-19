@@ -203,6 +203,6 @@ public:
 /**
  * Full screen display of SetUp options as buttons.
  */
-void SetUpScreen();
+void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch);
 
 #endif

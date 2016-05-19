@@ -123,7 +123,7 @@ void setup() {
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(ILI9341_DARKGREEN);
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
   // Initialise the touch panel.
   touch.begin(240, 320);
@@ -139,19 +139,13 @@ void setup() {
   delay(5000);
 
   DisplayMain(dm);
-  Serial.println("Setup Complete");
+  //Serial.println("Setup Complete");
   delay(50);
-  
-  //dd.Display(now);
-  //dow.Display(now);
   count = 0;
 }
 
 void loop() {
   DisplayUpdate(dm);
-  
-  //dd.Update(now);
-  //dow.Update(now);
 
   if (touch.isTouching())
   {
@@ -166,28 +160,7 @@ void loop() {
     beepOff();
     if (count >= 20 ) // More than a second before release.
     {  
-      TM_T now;
-
-      get_date_time(&now); 
-         
-      tft.fillScreen(ILI9341_BLACK);
-      Serial.println("SetTime>");
-      Serial.flush();
-      SetTime st_ctrl(&tft, &touch);
-      Serial.println("SetTime Display");
-      Serial.flush();
-      st_ctrl.Display(now); 
-      Serial.println("SetTime Update");
-      Serial.flush();
-      st_ctrl.Update(now);
-      Serial.println("<SetTime");
-      Serial.flush();
-
-      tft.fillScreen(ILI9341_BLACK);
-      SetDate sd_ctrl(&tft, &touch);
-      sd_ctrl.Display(now);
-      sd_ctrl.Update(now); 
-
+      SetUpScreen(tft, touch);
       DisplayMain(dm);
     }
     else if (count > 0) // Less then a second, rotate the bottom part of the main display.
