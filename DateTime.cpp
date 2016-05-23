@@ -229,7 +229,6 @@ DayOfWeek::DayOfWeek(Adafruit_ILI9341_STM* screen, int x_pos, int y_pos)
     bttns[idx]->setScreen(screen);
     bttns[idx]->setWidthHeight(20, 20);
     bttns[idx]->setFontSize(2);
-
   }
 }
 
@@ -771,6 +770,139 @@ void SetDate::Update(TM_T now)
   }
 }
 
+/*
+ ***************************************************************************
+ */
+ 
+SetDayOfWeek::SetDayOfWeek(Adafruit_ILI9341_STM* screen, XPT2046* touch_screen) 
+ : ox(15), oy(60), today (0), tft(screen), touch(touch_screen)
+{
+  bttns[0] = &mo; // Lines up with the tm_wday value from the RTC
+  bttns[1] = &tu;
+  bttns[2] = &we;
+  bttns[3] = &th;
+  bttns[4] = &fr;
+  bttns[5] = &sa;
+  bttns[6] = &su;
+  bttns[7] = &bok;
+  bttns[8] = &bcancel;
+
+  for (int idx=0; idx < MAX_BTTNS; idx++)
+  {
+    bttns[idx]->setScreen(screen);
+    
+    if (idx <= 6) // Only day of week buttons.
+    {
+      bttns[idx]->setWidthHeight(50, 50);
+      bttns[idx]->setColor(ILI9341_BLACK, ILI9341_WHITE);
+      // bttns[idx]->setFontSize(2);
+    }
+  }
+}
+
+void SetDayOfWeek::Display(TM_T now)
+{
+  int x = ox;
+  int y = oy;
+
+  mo.setPosition(x, y);
+  mo.setText("Mo");
+  tu.setPosition(x+=60, y);
+  tu.setText("Tu");
+  we.setPosition(x+=60, y);
+  we.setText("We");
+  th.setPosition(x+=60, y);
+  th.setText("Th");
+  fr.setPosition(x+=60, y);
+  fr.setText("Fr");
+  x = ox + 60;
+  sa.setPosition(x, y+=60);
+  sa.setText("Sa");
+  su.setPosition(x+=120, y);
+  su.setText("Su");
+
+  // Other buttons
+  bok.setPosition(40, 196);
+  bok.setWidthHeight(100, 34);
+  bok.setText("Ok");
+
+  bcancel.setPosition(180, 196);
+  bcancel.setWidthHeight(100, 34);
+  bcancel.setText("Cancel");
+
+  for (int idx=0; idx < MAX_BTTNS; idx++)
+  {
+    bttns[idx]->Draw();  
+  }
+
+  // Highlight the actual day
+  today = now.tm_wday;
+  bttns[today-1]->Release();  
+  
+  tft->setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+  tft->drawCentreString("SET DAY OF WEEK", 160, 10, 4);  
+}
+
+void SetDayOfWeek::Update(TM_T now) 
+{
+  Button* touching = NULL;
+
+  while(true)
+  {
+    // Set when a button is pressed.
+    int bttn_idx = 0xFF;
+    if (!touching && touch->isTouching())
+    {
+      uint16_t x, y, tens, units;
+      touch->getPosition(x, y);
+
+      // Which Button widget is being touched, if any.
+      for(int idx=0; idx < MAX_BTTNS; idx++)
+      {
+        if ( (touching = (Button *)bttns[idx]->Press(x, y)) )
+        {
+          bttn_idx = idx;
+          beepDelay(50);  // Beep to show a button was pressed.
+          break;
+        }
+      }  
+
+      // If a button was pressed.
+      if (bttn_idx != 0xFF) 
+      {
+        // If it was a 'day of week' button - 0 to 6.
+        if (bttn_idx <= 6) 
+        {
+          bttns[today-1]->Release();  // Un-highlight the current day.
+          today = bttn_idx + 1;
+          //bttns[bttn_idx]->Release();  // Now highlight the new day.  
+        }
+        else if (touching == &bok)
+        {
+          TM_T delta;
+          get_date_time(&delta);
+          now = delta;
+          now.tm_wday = today;
+          set_date_time(&now);
+          bok.Release();
+          return;
+        }
+        else if (touching == &bcancel)
+        {
+          // Exit without changing day of week.
+          bcancel.Release();
+          return;
+        }         
+      }
+    }
+    else if (touching && !touch->isTouching())
+    {
+      touching = NULL;
+    }
+    delay(50);
+  }  
+}
+
 /**
  * Full screen display of SetUp options as buttons.
  */
@@ -779,6 +911,7 @@ void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch)
   enum EButton {
     bttn_set_time,
     bttn_set_date,
+    bttn_set_week_day,
     bttn_done,
     bttn_max    // Always the last enum.
   };
@@ -787,17 +920,20 @@ void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch)
   Button* touching = NULL;
   
   Button* bttns[bttn_max];
-  Button stb(&tft, 20, 40, 130, 40, "Time");
-  Button sdb(&tft, 20, 90, 130, 40, "Date");
+  //Button stb(&tft, 20, 40, 130, 40, "Time");
+  Button stb(&tft, 95, 40, 130, 40, "Time");
+  Button sdb(&tft, 95, 90, 130, 40, "Date");
+  Button swdb(&tft, 95, 140, 130, 40, "Week Day");
   //Button sdb(&tft, 170, 40, 130, 40, "Date");
-  Button dnb(&tft, 100, 190, 120, 40, "Done");
+  Button dnb(&tft, 95, 190, 130, 40, "Done");
 
   EButton pressed;
 
-  bttns[bttn_set_time]  = &stb;
-  bttns[bttn_set_date]  = &sdb;
-  bttns[bttn_done]      = &dnb;
-  
+  bttns[bttn_set_time]      = &stb;
+  bttns[bttn_set_date]      = &sdb;
+  bttns[bttn_set_week_day]  = &swdb;
+  bttns[bttn_done]          = &dnb;
+
   tft.fillScreen(ILI9341_BLACK);
   tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
   tft.drawCentreString("SET", 160, 10, 4); 
@@ -845,6 +981,14 @@ void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch)
             tft.fillScreen(ILI9341_BLACK);
             sd_ctrl.Display(now);
             sd_ctrl.Update(now); 
+            break;
+          }
+          case bttn_set_week_day:
+          {
+            SetDayOfWeek sdow_ctrl(&tft, &touch);
+            tft.fillScreen(ILI9341_BLACK);
+            sdow_ctrl.Display(now);
+            sdow_ctrl.Update(now); 
             break;
           }
           case bttn_done:

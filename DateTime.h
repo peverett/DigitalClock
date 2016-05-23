@@ -201,6 +201,26 @@ public:
 };
 
 /**
+ * Class for setting the Day Of Week - full screen contol widget.
+ */
+class SetDayOfWeek
+{
+  const static int MAX_BTTNS = 9;
+  Button mo, tu, we, th, fr, sa, su;
+  int ox;
+  int oy;
+  int today;
+  Button bok, bcancel;
+  Button *bttns[MAX_BTTNS];
+  Adafruit_ILI9341_STM* tft;
+  XPT2046* touch;
+public:
+  SetDayOfWeek(Adafruit_ILI9341_STM* screen, XPT2046* touch_screen);
+  void Display(TM_T now);
+  void Update(TM_T now);
+};
+
+/**
  * Full screen display of SetUp options as buttons.
  */
 void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch);
