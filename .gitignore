@@ -1,0 +1,6 @@
+# Ignore generated Doxgen html
+html/
+# Ignore vim swp and backup files
+*~
+*.sw*
+

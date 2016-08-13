@@ -152,7 +152,10 @@ DoubleDigit::DoubleDigit(
     int initial_value,
     bool leading_zero
     )
-  : Component(screen, x_pos, y_pos), fntsz(font_size), val(initial_value), lz(leading_zero)
+  : Component(screen, x_pos, y_pos), 
+    fntsz(font_size), 
+    val(initial_value), 
+    lz(leading_zero)
   {
   }
 
@@ -373,7 +376,11 @@ Button::Button(
     int height,
     char* text
     )
-: Component(screen, x_pos, y_pos), bttnw(width), bttnh(height), bttntxt(text), fntsz(4)
+:   Component(screen, x_pos, y_pos), 
+    bttnw(width), 
+    bttnh(height), 
+    bttntxt(text), 
+    fntsz(4)
 { }
 
 Button::Button() : Component() 
