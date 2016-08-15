@@ -796,6 +796,7 @@ FILE_PATTERNS          = *.c \
                          *.java \
                          *.ii \
                          *.ixx \
+                         *.ino \
                          *.ipp \
                          *.i++ \
                          *.inl \
