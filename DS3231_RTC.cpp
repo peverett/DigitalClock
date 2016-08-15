@@ -1,5 +1,6 @@
 #include "DS3231_RTC.h"
 
+// This is the hardcoded RTC module I2C address.
 static const uint8_t DS3231_I2C_ADDRESS = 0x68;
 
 // Helper function that converts char Binary Coded Decimal (BCD) value into decimal.
@@ -74,3 +75,164 @@ void set_date_time(TM_T *date_time)
     Wire.endTransmission();
 }
 
+// Reads registers 0x08-0x09 (AL1M2-AL1M3) for Alarm1 - Seconds is always 0
+// Reads registers 0x0B-0x0C (AL1M2-AL2M3) for Alarm2 
+uint8_t get_alarm_time(uint8_t alarm_id, ALARM_T *alarm_time)
+{
+    int result = 0;
+
+    if (alarm_id == ALARM1 || alarm_id == ALARM2) {
+        uint8_t *ptr = (uint8_t *)alarm_time;
+        uint8_t alarm_reg = 0x08;           // Alarm 1 by default.
+
+        if (alarm_id == ALARM2) {
+            alarm_reg = 0x0B;               // Alarm 2.
+        }
+
+        // set the register to read from - alarm1 or alarm2.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write(alarm_reg);
+        Wire.endTransmission();
+
+        // read 2 bytes from the alarm registers - minutes & hours
+        Wire.requestFrom(DS3231_I2C_ADDRESS, 2);
+        while(Wire.available())
+        {
+          *ptr++ = bcd2dec( 0x7F, Wire.read() );
+        }
+
+        result = 1;
+    }
+    return result;
+}
+
+// Writes registers 0x08-0x09 (AL1M2-AL1M3) for Alarm1 - Seconds is always 0
+// Writes registers 0x0B-0x0C (AL1M2-AL2M3) for Alarm2 
+int set_alarm_time(uint8_t alarm_id, const ALARM_T *alarm_time)
+{
+    int result = 0;
+
+    if (alarm_id == ALARM1 || alarm_id == ALARM2) {
+        uint8_t alarm_reg = 0x08;       // Alarm 1 by default.
+
+        if (alarm_id == ALARM2) {
+            alarm_reg = 0x0B;               // Alarm 2.
+        }
+
+        // Set the register to write to - alarm1 or alarm2.
+        wire.beginTransmission(DS3231_I2C_ADDRESS);
+        wire.write( alarm_reg );
+        wire.write( dec2bcd(alarm_time->tm_min) );
+        wire.write( dec2bcd(alarm_time->tm_hour) );
+        wire.endTransmission();
+        
+        result = 1;
+    }
+    
+    return result;
+}
+
+// Sets the A1M4/A2M4 bit 7 to alarm when hours, minutes (and seconds) match.
+// Sets the appropriate bit in the Control register (after reading it).
+// Clears the appropriate bit in the Status register (after readint it).
+int set_alarm(uint8_t alarm_id, bool enable)
+{
+    uint8_t temp_reg;
+
+    int result = 0;
+
+    if (alarm_id == ALARM1 || alarm_id == ALARM2) {
+        uint8_t alarm_reg = 0x0A;       // A1M4 by default.
+
+        if (alarm_id == ALARM2) {
+            alarm_reg = 0x0D;               // A2M4.
+        }
+
+        // Set the register to write to - A1M4 or A2M4.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( alarm_reg );
+        if (enable)
+            Wire.write( 0x80 );                 // Set bit 7 - alarm on hours/mins.
+        else 
+            Wire.write( 0x00 );
+        Wire.endTransmission();
+
+        // Read the Control register and then set the appropriate alarm bit.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( 0x0E );
+        Wire.endTransmission();
+
+        Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+        while(Wire.available())
+        {
+          temp_reg = Wire.read();
+        }
+
+        // Now write it back with the appropriate bit set or unset.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( 0x0E );
+        if (enable)
+            Wire.write( temp_reg | alarm_id );
+        else
+            Wire.write( temp_reg & (~alarm_id) );
+        Wire.endTransmission();
+
+        // If enabling an alarm...
+        // Read the Status register and then clear the alarm bit.
+        if (enable) {
+            Wire.beginTransmission(DS3231_I2C_ADDRESS);
+            Wire.write( 0x0F );
+            Wire.endTransmission();
+
+            Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+            while(Wire.available())
+            {
+              temp_reg = Wire.read();
+            }
+
+            // Now write it back with the appropriate bit cleared.
+            Wire.beginTransmission(DS3231_I2C_ADDRESS);
+            Wire.write( 0x0F );
+            Wire.write( temp_reg & (~alarm_id) );
+            Wire.endTransmission();
+        }
+        
+        result = 1;
+    }
+    
+    return result;
+}
+
+// Read the Control and Status registers basically.
+int get_alarm_status(uint8_t *enabled, uint8_t *triggered)
+{
+    int result = 0;
+
+    if (alarm_id == ALARM1 || alarm_id == ALARM2) {
+        // Read the Control register and  mask out all but the Alarm bits.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( 0x0E );
+        Wire.endTransmission();
+
+        Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+        while(Wire.available())
+        {
+          *enabled = ALARM_MASK & Wire.read();
+        }
+
+        // Read the Status register alarm bits
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( 0x0F );
+        Wire.endTransmission();
+
+        Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+        while(Wire.available())
+        {
+          *triggered = ALARM_MASK & Wire.read();
+        }
+
+        result = 1;
+    }
+    
+    return result;
+}
