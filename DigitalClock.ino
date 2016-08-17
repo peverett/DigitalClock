@@ -123,7 +123,7 @@ void setup() {
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(ILI9341_DARKGREEN);
-  //Serial.begin(9600);
+  Serial.begin(9600);
 
   // Initialise the touch panel.
   touch.begin(240, 320);
@@ -139,7 +139,51 @@ void setup() {
   delay(5000);
 
   DisplayMain(dm);
-  //Serial.println("Setup Complete");
+  Serial.println("Setup Complete");
+
+  {
+    uint8_t enabled = 99;
+    uint8_t triggered = 99;
+    ALARM_T alarm;
+    TM_T now;
+
+    get_date_time(&now);
+    
+    get_alarm_status(&enabled, &triggered);
+    Serial.print("Enabled: ");
+    Serial.print(enabled, 16);
+    Serial.print(", Triggered: ");
+    Serial.println(triggered, 16);
+
+    get_alarm_time(ALARM1, &alarm);
+    Serial.print("Alarm 1: ");
+    Serial.print(alarm.tm_hour);
+    Serial.print(":");
+    Serial.println(alarm.tm_min);
+
+    get_alarm_time(ALARM2, &alarm);
+    Serial.print("Alarm 2: ");
+    Serial.print(alarm.tm_hour);
+    Serial.print(":");
+    Serial.println(alarm.tm_min);
+
+    alarm.tm_hour=now.tm_hour;
+    alarm.tm_min=(now.tm_min + 2) % 60;
+    set_alarm_time(ALARM1, &alarm);
+    set_alarm(ALARM1, true);
+
+    get_alarm_time(ALARM1, &alarm);
+    Serial.print("Alarm 1: ");
+    Serial.print(alarm.tm_hour);
+    Serial.print(":");
+    Serial.println(alarm.tm_min);
+
+    get_alarm_status(&enabled, &triggered);
+    Serial.print("Enabled: ");
+    Serial.print(enabled, 16);
+    Serial.print(", Triggered: ");
+    Serial.println(triggered, 16);
+  }
   delay(50);
   count = 0;
 }

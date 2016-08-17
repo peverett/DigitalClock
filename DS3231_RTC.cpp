@@ -106,25 +106,30 @@ uint8_t get_alarm_time(uint8_t alarm_id, ALARM_T *alarm_time)
     return result;
 }
 
-// Writes registers 0x08-0x09 (AL1M2-AL1M3) for Alarm1 - Seconds is always 0
+// Writes registers 0x07-0x09 (AL1M1-AL1M3) for Alarm1 - Seconds is always 0
 // Writes registers 0x0B-0x0C (AL1M2-AL2M3) for Alarm2 
 int set_alarm_time(uint8_t alarm_id, const ALARM_T *alarm_time)
 {
     int result = 0;
 
     if (alarm_id == ALARM1 || alarm_id == ALARM2) {
-        uint8_t alarm_reg = 0x08;       // Alarm 1 by default.
+        uint8_t alarm_reg = 0x07;       // Alarm 1 by default.
 
         if (alarm_id == ALARM2) {
             alarm_reg = 0x0B;               // Alarm 2.
         }
 
         // Set the register to write to - alarm1 or alarm2.
-        wire.beginTransmission(DS3231_I2C_ADDRESS);
-        wire.write( alarm_reg );
-        wire.write( dec2bcd(alarm_time->tm_min) );
-        wire.write( dec2bcd(alarm_time->tm_hour) );
-        wire.endTransmission();
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( alarm_reg );
+        
+        if (alarm_id == ALARM1) {   // Only required for ALARM1
+          Wire.write( 0 );          // Set seconds to 0.
+        }
+        
+        Wire.write( dec2bcd(alarm_time->tm_min) );
+        Wire.write( dec2bcd(alarm_time->tm_hour) );
+        Wire.endTransmission();
         
         result = 1;
     }
@@ -180,21 +185,7 @@ int set_alarm(uint8_t alarm_id, bool enable)
         // If enabling an alarm...
         // Read the Status register and then clear the alarm bit.
         if (enable) {
-            Wire.beginTransmission(DS3231_I2C_ADDRESS);
-            Wire.write( 0x0F );
-            Wire.endTransmission();
-
-            Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
-            while(Wire.available())
-            {
-              temp_reg = Wire.read();
-            }
-
-            // Now write it back with the appropriate bit cleared.
-            Wire.beginTransmission(DS3231_I2C_ADDRESS);
-            Wire.write( 0x0F );
-            Wire.write( temp_reg & (~alarm_id) );
-            Wire.endTransmission();
+            clear_alarm(alarm_id);
         }
         
         result = 1;
@@ -204,23 +195,41 @@ int set_alarm(uint8_t alarm_id, bool enable)
 }
 
 // Read the Control and Status registers basically.
-int get_alarm_status(uint8_t *enabled, uint8_t *triggered)
+void get_alarm_status(uint8_t *enabled, uint8_t *triggered)
 {
     int result = 0;
 
-    if (alarm_id == ALARM1 || alarm_id == ALARM2) {
-        // Read the Control register and  mask out all but the Alarm bits.
-        Wire.beginTransmission(DS3231_I2C_ADDRESS);
-        Wire.write( 0x0E );
-        Wire.endTransmission();
+    // Read the Control register and  mask out all but the Alarm bits.
+    Wire.beginTransmission(DS3231_I2C_ADDRESS);
+    Wire.write( 0x0E );
+    Wire.endTransmission();
 
-        Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
-        while(Wire.available())
-        {
-          *enabled = ALARM_MASK & Wire.read();
-        }
+    Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+    while(Wire.available())
+    {
+      *enabled = ALARM_MASK & Wire.read();
+    }
 
-        // Read the Status register alarm bits
+    // Read the Status register alarm bits
+    Wire.beginTransmission(DS3231_I2C_ADDRESS);
+    Wire.write( 0x0F );
+    Wire.endTransmission();
+
+    Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
+    while(Wire.available())
+    {
+      *triggered = ALARM_MASK & Wire.read();
+    }
+}
+
+int clear_alarm(uint8_t alarm_id)
+{
+    int result = 0;
+
+    if (alarm_id & ALARM_MASK) {
+        uint8_t temp_reg;
+
+        // Read the Status register.
         Wire.beginTransmission(DS3231_I2C_ADDRESS);
         Wire.write( 0x0F );
         Wire.endTransmission();
@@ -228,11 +237,15 @@ int get_alarm_status(uint8_t *enabled, uint8_t *triggered)
         Wire.requestFrom(DS3231_I2C_ADDRESS, 1);
         while(Wire.available())
         {
-          *triggered = ALARM_MASK & Wire.read();
+          temp_reg = Wire.read();
         }
+
+        // Now write it back with the appropriate bit cleared.
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write( 0x0F );
+        Wire.write( temp_reg & (~alarm_id) );
+        Wire.endTransmission();
 
         result = 1;
     }
-    
-    return result;
 }

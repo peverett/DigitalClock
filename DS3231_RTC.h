@@ -173,8 +173,17 @@ int set_alarm(uint8_t alarm_id, bool enable);
  *        are enabled (#ALARM1 and/or #ALARM2).
  * \param triggered Ponter to uint8_t bit field which will contain which alarms
  *        have been triggered (#ALARM1 and/or #ALARM2).
+ */
+void get_alarm_status(uint8_t *enabled, uint8_t *triggered);
+
+/* \brief cancel_alarm
+ *
+ * Clears the specied alarm bit(s) in the control register.
+ *
+ * \param alarm_id The alarm to clear - #ALARM1, #ALARM2 or both.
+ *
  * \result Returns 1 if successful or 0 otherwise.
  */
-int get_alarm_status(uint8_t *enabled, uint8_t *triggered);
+int clear_alarm(uint8_t alarm_id);
 
 #endif   /* DS3231_RTC_ */
