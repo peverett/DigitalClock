@@ -83,7 +83,11 @@ void DisplayTimeWidget::Display(TM_T now)
  ***************************************************************************
  */
  
-DisplayDateFull::DisplayDateFull(Adafruit_ILI9341_STM* screen, int x_pos, int y_pos) 
+DisplayDateFull::DisplayDateFull(
+        Adafruit_ILI9341_STM* screen, 
+        int x_pos, 
+        int y_pos
+        ) 
 {
   ox = x_pos;
   oy = y_pos;
