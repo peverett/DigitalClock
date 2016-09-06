@@ -25,10 +25,11 @@
 #define touch_irq 27
 #define touch_spiport 2
 
-#define display_date_full 0
-#define display_date 1
-#define display_temp 2
-#define display_last 3
+#define display_alm1 0
+#define display_alm2 1
+#define display_date 2
+#define display_temp 3
+#define display_last 4
 
 #if 0
 #define PWM_VALUE 200
@@ -49,11 +50,11 @@ static void inline beepOff()
 Adafruit_ILI9341_STM tft = Adafruit_ILI9341_STM(tft_cs, tft_dc, tft_rst);
 XPT2046 touch = XPT2046(touch_cs, touch_irq, touch_spiport);
 
-uint8_t dm = display_date;
+int dm = display_date;
 
 DisplayTimeWidget dtw = DisplayTimeWidget(&tft, 0, 0);
-DisplayDateFullWidget ddfw = DisplayDateFullWidget(&tft, 0, 120);
-DisplayDateWidget ddw = DisplayDateWidget(&tft, 0, 120);
+DisplayAlarmWidget almw = DisplayAlarmWidget(&tft, 0, 120);
+DisplayDateFullWidget ddw = DisplayDateFullWidget(&tft, 0, 120);
 DisplayTempWidget temp = DisplayTempWidget(&tft, 0, 120);
 
 void DisplayMain(uint8_t mode, bool display_time=true)
@@ -70,8 +71,18 @@ void DisplayMain(uint8_t mode, bool display_time=true)
   
   switch (mode)
   {
-    case display_date_full:
-      ddfw.Display(now);
+    case display_alm1:
+    /* Deliberate drop-through. */
+    case display_alm2:
+      {
+        ALARM_T alarm;
+        uint8_t enabled, triggered;
+        uint8_t id = (mode == display_alm1) ? ALARM1 : ALARM2;
+        
+        get_alarm_time(id, &alarm);
+        get_alarm_status(&enabled, &triggered);
+        almw.Display(id, (enabled & id), alarm);
+      }
       break;
     case display_date:
       ddw.Display(now);
@@ -96,8 +107,9 @@ static void DisplayUpdate(uint8_t mode)
   
   switch (mode)
   {
-    case display_date_full:
-      ddfw.Update(now);
+    case display_alm1:
+    case display_alm2:
+      // Do nothing;
       break;
     case display_date:
       ddw.Update(now);

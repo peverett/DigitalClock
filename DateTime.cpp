@@ -1021,3 +1021,92 @@ void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch)
   }
 }
 
+/*
+ ***************************************************************************
+ */
+
+DisplayAlarm::DisplayAlarm(Adafruit_ILI9341_STM* screen, int x_pos, int y_pos)
+{
+  ox = x_pos;
+  oy = y_pos;
+
+  comps[0] = &ht;
+  comps[1] = &hu;
+  comps[2] = &c1;
+  comps[3] = &mt;
+  comps[4] = &mu;
+  comps[5] = (Component *)&on;
+  comps[6] = (Component *)&off;
+  
+  for (int idx=0; idx < DisplayAlarm::MAX_COMPS; idx++)
+  {
+    comps[idx]->setScreen(screen);
+  }
+}
+
+void DisplayAlarm::Display(ALARM_T alarm)
+{
+    int x = ox;
+    int y = oy;
+
+    ht.setPosition(x, y);
+    ht.setValue(alarm.tm_hour / 10);
+    hu.setPosition(x+=DGT_W, y);
+    hu.setValue(alarm.tm_hour % 10);
+    c1.setPosition(x+=DGT_W, y);
+    mt.setPosition(x+=CLN_W, y);
+    mt.setValue(alarm.tm_min / 10);
+    mu.setPosition(x+=DGT_W, y);
+    mu.setValue(alarm.tm_min % 10);
+
+    for (int idx=0; idx < MAX_COMPS; idx++)
+    {
+      comps[idx]->Draw();
+    }
+}
+
+void DisplayAlarm::Update(ALARM_T alarm)
+{
+    ht.Update(alarm.tm_hour / 10);
+    hu.Update(alarm.tm_hour % 10);
+    mt.Update(alarm.tm_min / 10);
+    mu.Update(alarm.tm_min % 10);
+}
+
+/*
+ ***************************************************************************
+ */
+
+DisplayAlarmWidget::DisplayAlarmWidget(
+  Adafruit_ILI9341_STM* screen, 
+  int x_pos, 
+  int y_pos
+  )
+: DisplayAlarm(screen, x_pos+44, y_pos+36),
+  tft(screen), ox(x_pos), oy(y_pos)
+{}
+
+void DisplayAlarmWidget::Display(
+        uint8_t alarm_id, 
+        uint8_t enabled, 
+        ALARM_T alarm
+        )
+{
+  char alm_str[] = "ALM 1";
+  char alm_state[] = "OFF";
+
+  if (alarm_id != ALARM1) {
+      alm_str[4] = '2';
+  }
+  if (enabled) {
+      alm_state[1] = 'N';
+      alm_state[2] = '\0';
+  }
+
+  tft->fillRect(ox+1, oy+1, 318, 118, ILI9341_BLACK);
+  DisplayAlarm::Display(alarm);
+  tft->drawCentreString( alm_str, ox+242, oy+36, 4);
+  tft->drawCentreString( alm_state, ox+242, oy+60, 4);
+}
+
+

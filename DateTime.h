@@ -27,6 +27,7 @@ class DisplayTime
   Colon c1, c2;
   Component *comps[MAX_COMPS];
 public:
+
   /*!
    * \brief Constructor.
    *
@@ -137,7 +138,7 @@ public:
 };
 
 /*
- * \brief DisplayDateWidget
+ * \brief DisplayDateFullWidget
  *
  * The only purpose of this widget is to centre a DisplayFullDate component in
  * a 320 x 120 half of the screen. It fills that space (-1 pixel each side)
@@ -530,5 +531,81 @@ public:
 * \param touch_screen Pointer to the XPT2046 touch class.
  */
 void SetUpScreen(Adafruit_ILI9341_STM& tft, XPT2046& touch);
+
+class DisplayAlarm
+{
+    const static int MAX_COMPS=7;
+    int ox;
+    int oy;
+    Digit ht, hu, mt, mu;
+    Colon c1;
+    Button on, off;
+    Component *comps[MAX_COMPS];
+public:
+
+    /*!
+     * \brief Constructor
+     * \param screen Pointer to an ILI9341 display class for the TFT.
+     * \param x_pos Top left corner X co-ordinate.
+     * \param y_pos Top left conrer Y co-ordinate.
+     */
+    DisplayAlarm(Adafruit_ILI9341_STM* screen, int x_pos, int y_pos);
+
+    /*!
+     * \brief Display the alarm widget, drawing it completely.
+     *
+     * \param alm ALARM_T structure containing alarm information.
+     */
+    void Display(ALARM_T alarm);
+
+    /*!
+     * \brief Update the alarm widget display.
+     *
+     * Only update the part of the alarm display that has changed since the last
+     * update.
+     *
+     * \param alm ALARM_T structure containing alarm information.
+     */
+    void Update(ALARM_T alarm);
+};
+
+/*! 
+ * \brief DisplayAlarmWidget class
+ *
+ * Displays the Alarm and it's status (on or off)
+ */
+class DisplayAlarmWidget : public DisplayAlarm
+{
+  Adafruit_ILI9341_STM* tft;
+  int ox;
+  int oy;
+public:
+  /*!
+   * \brief Constructor.
+   *
+   * \param screen Pointer to an ILI9341 display class for the TFT.
+   * \param x_pos Top left corner X co-ordinate.
+   * \param y_pos Top left conrer Y co-ordinate.
+   */
+  DisplayAlarmWidget(
+          Adafruit_ILI9341_STM* screen, 
+          int x_pos=0, 
+          int y_pos=0
+          );
+
+  /*!
+   * \brief Display the alarm widget, drawing all components.
+   *
+   * \param alarm_id Which alarm to display #ALARM1 or #ALARM2.
+   * \param enabled Non-zero indicates the alarm is ON.
+   * \param alarm ALARM_T structure containing the alarm hour and minute.
+   */
+  void Display(
+        uint8_t alarm_id, 
+        uint8_t enabled, 
+        ALARM_T alarm
+        );
+
+};
 
 #endif
